@@ -11,49 +11,98 @@ st.set_page_config(
     layout="wide"
 )
 
-# Use the folder containing this app.py file.
-# Do not use Colab's /content path on Streamlit Cloud.
+# Correct path for Streamlit Cloud and GitHub
 BASE_DIR = Path(__file__).resolve().parent
 DATA_FILE = BASE_DIR / "saas_churn_dataset.csv"
 MODEL_FILE = BASE_DIR / "saas_churn_model.pkl"
 
-# ---------------- CUSTOM DESIGN ----------------
+# ---------------- PROFESSIONAL DESIGN ----------------
 st.markdown("""
 <style>
-.stApp {
-    background-color: #F3F6FC;
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"] {
+    background-color: #F3F6FC !important;
+    color: #172B4D !important;
 }
-[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #101D38, #203F70);
+
+[data-testid="stHeader"] {
+    background-color: transparent !important;
 }
-[data-testid="stSidebar"] * {
-    color: white;
-}
+
 .block-container {
     padding-top: 2rem;
+    padding-bottom: 2rem;
 }
+
+[data-testid="stMain"] h1,
+[data-testid="stMain"] h2,
+[data-testid="stMain"] h3,
+[data-testid="stMain"] h4,
+[data-testid="stMain"] p,
+[data-testid="stMain"] label,
+[data-testid="stMain"] [data-testid="stWidgetLabel"],
+[data-testid="stMain"] [data-testid="stCaptionContainer"] {
+    color: #172B4D !important;
+}
+
+/* Dashboard banner */
 .hero {
     background: linear-gradient(120deg, #142746, #3266B2);
     padding: 28px;
     border-radius: 16px;
-    color: white;
     margin-bottom: 24px;
 }
+
 .hero h1 {
-    color: white;
+    color: #FFFFFF !important;
     font-size: 30px;
 }
+
 .hero p {
-    color: #E0EAFE;
+    color: #E0EAFE !important;
 }
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #101D38, #203F70);
+}
+
+[data-testid="stSidebar"] * {
+    color: #FFFFFF;
+}
+
+/* Metric cards */
 div[data-testid="stMetric"] {
-    background: white;
+    background-color: #FFFFFF;
     padding: 18px;
-    border: 1px solid #E1E8F0;
+    border: 1px solid #DFE7F2;
     border-radius: 12px;
 }
-div[data-testid="stMetricValue"] {
-    color: #18345C;
+
+div[data-testid="stMetricLabel"],
+div[data-testid="stMetricValue"],
+div[data-testid="stMetricDelta"] {
+    color: #18345C !important;
+}
+
+/* Input fields */
+[data-testid="stMain"] input,
+[data-testid="stMain"] textarea {
+    color: #172B4D !important;
+    background-color: #FFFFFF !important;
+}
+
+/* Select boxes */
+[data-testid="stMain"] [data-baseweb="select"] {
+    color: #172B4D;
+    background-color: #FFFFFF;
+}
+
+/* Data tables */
+[data-testid="stDataFrame"] {
+    border: 1px solid #DFE7F2;
+    border-radius: 10px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -74,8 +123,8 @@ def load_model():
 if not DATA_FILE.exists():
     st.error("Dataset file not found: saas_churn_dataset.csv")
     st.info(
-        "Make sure saas_churn_dataset.csv is uploaded "
-        "to the same GitHub repository as app.py."
+        "Upload saas_churn_dataset.csv to the same GitHub "
+        "repository as app.py."
     )
     st.stop()
 
@@ -86,7 +135,7 @@ except Exception as e:
     st.stop()
 
 
-# ---------------- VALIDATE DATA ----------------
+# ---------------- CHECK DATASET ----------------
 required_columns = [
     "CustomerID",
     "TenureMonths",
@@ -98,33 +147,32 @@ required_columns = [
 ]
 
 missing_columns = [
-    column for column in required_columns
-    if column not in df.columns
+    col for col in required_columns
+    if col not in df.columns
 ]
 
 if missing_columns:
-    st.error(f"Missing dataset columns: {missing_columns}")
+    st.error(f"Missing columns in dataset: {missing_columns}")
     st.stop()
 
 if df.empty:
     st.error("The dataset is empty.")
     st.stop()
 
-try:
-    df["Churn"] = pd.to_numeric(df["Churn"], errors="raise")
+df["Churn"] = pd.to_numeric(df["Churn"], errors="coerce")
 
-    if not df["Churn"].isin([0, 1]).all():
-        st.error("Churn column must contain only 0 and 1.")
-        st.stop()
-
-    df["Churn"] = df["Churn"].astype(int)
-
-except Exception as e:
-    st.error(f"Invalid Churn column: {e}")
+if df["Churn"].isna().any():
+    st.error("The Churn column contains invalid values.")
     st.stop()
 
+if not df["Churn"].isin([0, 1]).all():
+    st.error("The Churn column must contain only 0 and 1.")
+    st.stop()
 
-# ---------------- SIDEBAR ----------------
+df["Churn"] = df["Churn"].astype(int)
+
+
+# ---------------- SIDEBAR NAVIGATION ----------------
 st.sidebar.title("📊 SaaS Intelligence")
 st.sidebar.caption("SUBSCRIPTION ANALYTICS")
 
@@ -155,7 +203,7 @@ st.markdown("""
 
 
 # ==================================================
-# DASHBOARD
+# 1. DASHBOARD
 # ==================================================
 if page == "Dashboard":
 
@@ -266,12 +314,12 @@ if page == "Dashboard":
 
 
 # ==================================================
-# CUSTOMER DATA
+# 2. CUSTOMER DATA
 # ==================================================
 elif page == "Customer Data":
 
     st.subheader("Customer Explorer")
-    st.caption("Search, filter, view and download customer records.")
+    st.write("Search and filter customer records.")
 
     search = st.text_input("Search by Customer ID")
 
@@ -284,7 +332,7 @@ elif page == "Customer Data":
         )
 
     with col2:
-        rows = st.selectbox(
+        row_limit = st.selectbox(
             "Rows to display",
             [25, 50, 100, 500]
         )
@@ -309,7 +357,7 @@ elif page == "Customer Data":
     st.metric("Matching Customers", f"{len(filtered):,}")
 
     st.dataframe(
-        filtered.head(rows),
+        filtered.head(row_limit),
         use_container_width=True,
         hide_index=True
     )
@@ -323,7 +371,7 @@ elif page == "Customer Data":
 
 
 # ==================================================
-# CHURN PREDICTION
+# 3. CHURN PREDICTION
 # ==================================================
 else:
 
@@ -333,8 +381,8 @@ else:
     if not MODEL_FILE.exists():
         st.error("Model file not found: saas_churn_model.pkl")
         st.info(
-            "Upload saas_churn_model.pkl to the same "
-            "GitHub repository as app.py."
+            "Upload saas_churn_model.pkl to the same GitHub "
+            "repository as app.py."
         )
         st.stop()
 
@@ -344,7 +392,6 @@ else:
         st.error(f"Unable to load the trained model: {e}")
         st.stop()
 
-    # Keep feature names and order consistent with the existing model.
     feature_names = [
         "TenureMonths",
         "MonthlyCharges",
@@ -352,18 +399,6 @@ else:
         "SupportTickets",
         "PaymentDelays"
     ]
-
-    # Check model feature names if available.
-    trained_features = getattr(model, "feature_names_in_", None)
-
-    if trained_features is not None:
-        if list(trained_features) != feature_names:
-            st.error(
-                "The model's feature names or order do not match "
-                "the prediction form. The model must use: "
-                + ", ".join(feature_names)
-            )
-            st.stop()
 
     with st.form("prediction_form"):
 
@@ -420,7 +455,20 @@ else:
                 columns=feature_names
             )
 
-            prediction = int(model.predict(customer)[0])
+            # Check model feature names when available
+            trained_features = getattr(
+                model, "feature_names_in_", None
+            )
+
+            if trained_features is not None:
+                if list(trained_features) != feature_names:
+                    st.error(
+                        "Model input columns do not match the form. "
+                        "The model needs to be checked."
+                    )
+                    st.stop()
+
+            prediction = model.predict(customer)[0]
 
             probability = None
 
@@ -446,6 +494,7 @@ else:
 
             if prediction == 1:
                 st.error("⚠️ Higher Risk: Customer may churn.")
+
                 st.write(
                     "Review customer support issues, "
                     "usage patterns and payment delays."
@@ -463,8 +512,8 @@ else:
                 )
 
             st.caption(
-                "This is an estimate from the trained model, "
-                "not a guarantee of customer behavior."
+                "This prediction is an estimate from the trained "
+                "model and is not a guarantee of customer behavior."
             )
 
         except Exception as e:
